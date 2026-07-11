@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "vdf-foundation",
+  "compatibility_date": "2026-07-11",
+  "assets": {
+    "directory": "./dist"
+  }
+  // Domain vdf.foundation is not yet purchased. Once it's on this Cloudflare
+  // account, add custom_domain routes here — see pedersen-foundation's or
+  // garbled-foundation's wrangler.jsonc for the exact shape, and watch for
+  // the leftover-placeholder-DNS-record gotcha documented in those repos'
+  // memory before attaching.
+}

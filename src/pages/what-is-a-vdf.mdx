@@ -1,0 +1,54 @@
+---
+layout: ../layouts/Layout.astro
+title: What is a VDF
+description: The three properties that define a Verifiable Delay Function — Verifiable, Delay, Function — and why that combination is harder to get than it sounds.
+---
+
+# What is a VDF
+
+Picture a race where everyone is forced to run at exactly the same pace — no
+amount of extra hardware, money, or cleverness lets you finish faster than
+anyone else — but judging who crossed the line, and when, takes the referee
+almost no time at all, and doesn't require them to have watched the whole
+race. That's the shape of a **Verifiable Delay Function**: a computation
+whose *running* is deliberately forced to take real time, and whose *result*
+can be checked almost instantly by someone who didn't do the work.
+
+## The three properties
+
+The formal definition, from Dan Boneh, Joseph Bonneau, Benedikt Bünz, and Ben
+Fisch's paper introducing the term, comes down to three properties:
+
+- **Verifiable.** After the (slow) computation finishes, the prover produces
+  a proof that's cheap to generate and, critically, cheap to check — the
+  verifier confirms the result is correct without redoing the computation.
+- **Delay.** The prover has to spend a real, substantial amount of sequential
+  time computing the function — there's no shortcut that produces the
+  correct output faster, even with many parallel processors.
+- **Function.** The map from input to output is deterministic: the same
+  input `x` always produces the same output `y`. It's not a proof of generic
+  work like a mining puzzle, where many different valid answers exist — a
+  VDF has exactly one correct output per input.
+
+Verifiable and Function are each achievable on their own without much
+difficulty. What makes VDFs a genuinely new primitive is needing all three at
+once: something that's slow for *everyone*, including the person who computed
+it, deterministic, and yet checkable in a fraction of the time it took to
+produce.
+
+## Why "slow for everyone" is the hard part
+
+A checksum or a hash is fast to compute and fast to verify — no delay. A hard
+puzzle with many valid solutions (like proof-of-work mining) has a delay in
+*expectation*, but any individual attempt might get lucky and finish
+instantly, and there's no unique correct output to check against. Getting a
+function that's slow *specifically because it's sequential* — not slow
+because it's hard to search, and not fast for someone with more parallel
+hardware — while still being fast to verify, is what [the actual
+construction](/how-it-works) is built to guarantee.
+
+---
+
+**Sources:** Dan Boneh, Joseph Bonneau, Benedikt Bünz, Ben Fisch, "Verifiable
+Delay Functions," 38th Annual International Cryptology Conference (CRYPTO
+2018, Santa Barbara, August 19–23, 2018), pp. 757–788.

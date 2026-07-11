@@ -1,0 +1,26 @@
+---
+layout: ../layouts/Layout.astro
+title: VDFs, explained
+description: A plain-spoken, working explanation of Verifiable Delay Functions (Boneh, Bonneau, Bünz, Fisch, CRYPTO 2018) — computation that provably takes real time to run, and almost no time to check.
+---
+
+# A computation that provably takes real time — and takes almost no time to check
+
+A **Verifiable Delay Function (VDF)** is a function that's deliberately slow to
+compute — not because of a missing optimization, but by design, using a
+computation that genuinely cannot be sped up by parallelizing it across more
+hardware — while producing a proof that lets anyone check the result almost
+instantly, without redoing the slow part. The term was formalized by Dan
+Boneh, Joseph Bonneau, Benedikt Bünz, and Ben Fisch at CRYPTO 2018.
+
+The mechanism is simple to state: repeated squaring in a group where the
+group's order is unknown, `y = x^(2^T) mod N`, T squarings in a row, each one
+depending on the last — which is exactly what makes it sequential. Read [what
+a VDF actually requires](/what-is-a-vdf) for the three properties that make
+this precise, or go straight to [the construction](/how-it-works): the
+squaring chain, the group of unknown order, and the Wesolowski proof that
+makes verification fast regardless of how long the computation ran.
+
+An interactive demo — running the delay live in your browser, T controlled by
+a slider, with a real proof and an almost-instant verification next to it —
+is coming in the next phase of this site.

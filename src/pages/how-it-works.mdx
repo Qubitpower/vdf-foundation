@@ -1,0 +1,126 @@
+---
+layout: ../layouts/Layout.astro
+title: How it works
+description: Repeated squaring in a group of unknown order, the Wesolowski proof and verification equations, and two honest caveats — about trusted setup and about how proof generation is simplified for the demo.
+---
+
+# How it works
+
+## Repeated squaring in a group of unknown order
+
+The computation at the heart of a VDF is almost embarrassingly simple:
+
+$$
+y = x^{2^T} \bmod N
+$$
+
+computed by literally squaring $T$ times in a row, each squaring depending on
+the previous result:
+
+$$
+y_0 = x, \qquad y_{i+1} = y_i^2 \bmod N, \qquad y = y_T
+$$
+
+There's no known way to compute $x^{2^T} \bmod N$ faster than $T$ sequential
+squarings — not with more parallel hardware, not with a shortcut — **as long
+as nobody knows the order of the group** $N$ defines. That last condition is
+load-bearing: if you *did* know the group's order $\varphi(N)$, you could
+reduce the giant exponent $2^T$ modulo that order first and then compute the
+result with a short, parallelizable modular-exponentiation instead of $T$
+sequential steps.
+
+Two ways to build a group of unknown order are used in practice:
+
+- **An RSA modulus** $N = p \cdot q$, for two large primes $p, q$. Nobody
+  should know $p$ and $q$ individually — whoever generated them must destroy
+  that factorization, because knowing it means knowing the group's order and
+  breaking sequentiality. This requires a **trusted setup**: someone has to
+  be trusted to have actually forgotten $p$ and $q$.
+- **A class group of an imaginary quadratic field.** These don't require a
+  trusted setup at all — the group's order is genuinely unknown to everyone,
+  by construction, from public parameters — at the cost of more complex
+  underlying math. Chia Network is the production system built on this
+  approach — a future Applications page on this site will cover it in
+  depth.
+
+## The Wesolowski proof
+
+Simply publishing $y$ isn't enough — anyone could claim any $y$. The prover
+needs to also produce a short proof that $y$ really is $x^{2^T} \bmod N$,
+checkable without redoing the $T$ squarings. Benjamin Wesolowski's
+construction — a future History page on this site covers the citation and
+the alternative Pietrzak construction — does this with one extra group
+element:
+
+$$
+\ell = \text{hash\_to\_prime}(x, y, T)
+$$
+
+a prime derived by hashing the statement itself — hash $(x, y, T)$ to a
+number, then search upward (checking primality with a Miller–Rabin test)
+until landing on a prime. Both prover and verifier compute $\ell$ the same
+way, so nothing needs to be transmitted for it.
+
+The prover then computes:
+
+$$
+q = \left\lfloor \frac{2^T}{\ell} \right\rfloor, \qquad r = 2^T \bmod \ell, \qquad \pi = x^q \bmod N
+$$
+
+Computing $r$ is a single fast modular exponentiation of the small base 2 —
+**not** $T$ sequential steps, since $r$ only needs $2^T \bmod \ell$, and
+$\ell$ is small enough that this is a standard fast modpow. $\pi$ is the
+actual proof, sent to the verifier alongside $y$.
+
+## Verification
+
+The verifier recomputes $\ell$ the same way the prover did, recomputes $r$
+the same way, and checks one equation:
+
+$$
+\ell' = \text{hash\_to\_prime}(x, y, T), \qquad r' = 2^T \bmod \ell'
+$$
+
+$$
+y \stackrel{?}{=} \pi^{\ell'} \cdot x^{r'} \pmod N
+$$
+
+This holds because $2^T = q\ell + r$ by construction, so $x^{2^T} = (x^q)^\ell
+\cdot x^r = \pi^\ell \cdot x^r \pmod N$ — exactly the right-hand side above.
+**Verifying takes a small, fixed number of fast modular exponentiations, no
+matter how large $T$ was.** That asymmetry — genuinely sequential to compute,
+cheap to check — is the entire point of the construction.
+
+## Two things this page won't let you gloss over
+
+**Trusted setup, honestly stated.** An RSA-modulus-based VDF is only as
+sequential as the guarantee that nobody knows $N$'s factorization. Generating
+$p$ and $q$ yourself and using them in your own computation is **not** a
+trusted setup in any meaningful sense — it's the opposite: you'd know the
+group's order and could skip straight to the answer, defeating the entire
+purpose. This site's interactive demo, coming in the next phase, will
+generate its own RSA modulus client-side purely for demonstration purposes,
+and will say so plainly rather than imply that's how a real deployment
+works. A real deployment needs either an actual multi-party trusted-setup
+ceremony on a cryptographically-sized modulus, or a class group, which needs
+no trusted setup at all — Chia Network does the latter, covered on a future
+Applications page.
+
+**Proof generation is simplified here, honestly stated.** Computing $\pi =
+x^q \bmod N$ by a direct modular exponentiation costs roughly the same number
+of sequential-ish operations as computing $y$ itself did, since $q$ is
+almost as large as $2^T$. Production systems use smarter techniques —
+caching intermediate powers computed along the way during Eval, and splitting
+Wesolowski's proof into many phases computed in parallel ("$n$-Wesolowski",
+used by Chia) — to make proof generation meaningfully faster than
+recomputing the delay from scratch. The code and interactive demo on this
+site (coming in later phases) use the direct, un-optimized computation of
+$\pi$: correct, and fast enough at demo-sized $T$, but not a demonstration
+of those production speedups.
+
+---
+
+**Sources:** Dan Boneh, Joseph Bonneau, Benedikt Bünz, Ben Fisch, "Verifiable
+Delay Functions," CRYPTO 2018, pp. 757–788. Further pages on this site will
+cover the Wesolowski and Pietrzak papers individually, and Chia Network's
+production use of class groups and $n$-Wesolowski.
