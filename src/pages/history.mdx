@@ -1,0 +1,73 @@
+---
+layout: ../layouts/Layout.astro
+title: History
+description: From time-lock puzzles in 1996, through the two independent proof systems that made VDFs practical, to today — each entry sourced to its original paper.
+---
+
+# History
+
+VDFs didn't appear from nowhere — there's an earlier, related primitive that
+motivated them, and the formal definition arrived years before anyone had a
+practical way to prove a delay quickly. Here's the timeline.
+
+### 1996 — Time-lock puzzles
+
+Ronald Rivest, Adi Shamir, and David Wagner publish *"Time-lock Puzzles and
+Timed-release Crypto,"* MIT Technical Report MIT/LCS/TR-684, introducing
+**time-lock puzzles**: encrypting a message so that decrypting it requires a
+provable minimum amount of sequential computation — the same repeated-squaring
+idea a VDF's Eval step uses. The construction is a genuine ancestor of VDFs,
+but it isn't the same primitive: each puzzle needs its own trusted setup (an
+RSA modulus generated specifically for that puzzle), and there's no
+general-purpose way for a third party to *publicly verify* that a claimed
+solution is correct without redoing the work — the whole idea a Wesolowski or
+Pietrzak proof was later built to solve.
+
+### 2000 — Timed commitments
+
+Dan Boneh and Moni Naor publish *"Timed Commitments,"* CRYPTO 2000, LNCS
+1880, pp. 236–254 — a commitment scheme built on the same time-lock idea,
+with a "forced opening" mechanism: if the committer refuses to reveal the
+value, anyone can still recover it by doing a moderate amount of sequential
+work. Like the 1996 puzzles, this is closely related to what a VDF does but
+predates the formal VDF definition and its efficient public-verification
+proofs by nearly two decades.
+
+### 2018 — Verifiable Delay Functions, formally defined
+
+Dan Boneh, Joseph Bonneau, Benedikt Bünz, and Ben Fisch publish *"Verifiable
+Delay Functions,"* CRYPTO 2018 (Santa Barbara, August 19–23, 2018),
+pp. 757–788 — the paper this whole site is about, formalizing the
+Verifiable/Delay/Function definition covered on [what is a
+VDF](/what-is-a-vdf) and proposing repeated squaring in a group of unknown
+order as a candidate construction.
+
+### 2018 — Two independent, practical proof systems
+
+Two papers, submitted independently within months of each other, solve the
+same problem — proving a repeated-squaring result quickly — with different
+tradeoffs:
+
+- Benjamin Wesolowski, *"Efficient Verifiable Delay Functions,"* EUROCRYPT
+  2019, pp. 379–407 (also *Journal of Cryptology* 33, 2019, pp. 2113–2147).
+  Wesolowski's proof is the one covered on [how it
+  works](/how-it-works): slower to generate (though parallelizable), but the
+  proof itself is small and checked in a small, fixed number of operations.
+- Krzysztof Pietrzak, *"Simple Verifiable Delay Functions,"* 10th Innovations
+  in Theoretical Computer Science Conference (ITCS 2019), LIPIcs vol. 124,
+  pp. 60:1–60:15. Pietrzak's proof is fast to generate, at the cost of a
+  larger proof that takes longer to verify.
+
+Dan Boneh, Benedikt Bünz, and Ben Fisch's *"A Survey of Two Verifiable Delay
+Functions,"* IACR ePrint 2018/712, compares the two directly and gives a
+unified security analysis — see [Further reading](/further-reading).
+
+---
+
+This list stops in 2019 deliberately: from there, VDF research branches into
+implementation and deployment work — hardware ASIC competitions,
+class-group-based systems, and the production use covered on
+[Applications](/applications) — better suited to its own page than a
+thinning tail here.
+
+**Sources:** linked inline above; all citations are to the original papers.

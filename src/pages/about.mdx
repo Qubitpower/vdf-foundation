@@ -1,0 +1,68 @@
+---
+layout: ../layouts/Layout.astro
+title: About
+description: What this site is, why it exists, who maintains it, and how to propose a correction — plus the license terms for the text and code.
+---
+
+# About
+
+## What this is
+
+This is a reference site about **Verifiable Delay Functions** — the
+cryptographic primitive formalized by Boneh, Bonneau, Bünz, and Fisch at
+CRYPTO 2018 — not an organization. "vdf.foundation" is a domain name chosen
+for the topic, in the same `.foundation` style as other single-topic
+reference sites in this small network (see below) — it isn't the name of an
+institution, and nothing on this site should be read as one.
+
+## Why it exists
+
+VDFs sit at an unusual intersection: a genuinely new cryptographic
+primitive, a small number of production deployments (Chia's Proof of Time
+being the clearest), and a construction — repeated squaring in a group of
+unknown order — that's easy to state and easy to misunderstand. Most
+explanations either stay at the "it's like a time-lock" analogy level or
+jump straight to the Wesolowski proof's algebra without ever letting you run
+it. This site tries to close that gap: a plain-spoken explanation, backed by
+working code and a live Eval/Proof/Verify demo you can actually run in your
+own browser, aimed at engineers rather than cryptographers.
+
+Every historical claim and citation on this site is sourced to a specific
+paper or primary reference (see [History](/history) and [Further
+reading](/further-reading)); nothing is stated from memory without a source.
+The interactive demo computes real values in your browser — see
+[Interactive](/interactive) and [Code](/code) — nothing is mocked or
+precomputed.
+
+## Part of a small network of reference sites
+
+This site shares its design and editorial approach with a small, growing
+set of independent reference sites on specific cryptographic primitives:
+[Pedersen Commitments](https://pedersen.foundation), on Torben Pedersen's
+commitment scheme, and [Garbled Circuits](https://garbled.foundation), on
+Yao's garbled circuits. Each covers one topic; none of them is an
+organization, and they aren't affiliated with each other beyond sharing a
+template.
+
+## Who maintains this
+
+This is an independent educational project maintained by one person, with
+public source and open contributions (see below). It is not affiliated with
+Dan Boneh, Joseph Bonneau, Benedikt Bünz, Ben Fisch, Benjamin Wesolowski,
+Krzysztof Pietrzak, Chia Network, IACR, CRYPTO, or any of the other
+researchers and organizations whose work it cites and links to.
+
+## Proposing a correction or addition
+
+The site's source is public on GitHub at
+[github.com/Qubitpower/vdf-foundation](https://github.com/Qubitpower/vdf-foundation).
+If you spot an error — a wrong date, a broken link, a math mistake in the
+demo — please open an issue or a pull request there.
+
+## License
+
+- **Text and explanations** on this site are licensed
+  [CC-BY](https://creativecommons.org/licenses/by/4.0/) — reuse and adapt
+  freely, with attribution.
+- **Code** (the demo, and the samples on the [Code](/code) page) is licensed
+  [MIT](https://opensource.org/license/mit/) — use it however you like.

@@ -1,0 +1,50 @@
+---
+layout: ../layouts/Layout.astro
+title: Further reading
+description: The original papers, the two independent proof systems, the survey that compares them, and Chia's production docs — every link checked before it went on this page.
+---
+
+# Further reading
+
+Every link below was checked to make sure it resolves and actually matches
+its description before going on this page.
+
+### The original paper
+
+Dan Boneh, Joseph Bonneau, Benedikt Bünz, and Ben Fisch, ["Verifiable Delay
+Functions"](https://eprint.iacr.org/2018/601) (CRYPTO 2018, pp. 757–788).
+The paper this whole site is built around: the formal Verifiable/Delay/
+Function definition, the repeated-squaring construction, and the original
+application ideas.
+
+### The two independent proof systems
+
+- Benjamin Wesolowski, ["Efficient Verifiable Delay
+  Functions"](https://eprint.iacr.org/2018/623) (EUROCRYPT 2019, pp.
+  379–407). The proof scheme this site's own [demo](/interactive)
+  implements.
+- Krzysztof Pietrzak, ["Simple Verifiable Delay
+  Functions"](https://eprint.iacr.org/2018/627) (ITCS 2019, LIPIcs vol. 124,
+  pp. 60:1–60:15). The faster-to-generate, larger-proof alternative — see
+  [how it works](/how-it-works) for how the two tradeoffs compare.
+
+### Comparing the two
+
+Dan Boneh, Benedikt Bünz, and Ben Fisch, ["A Survey of Two Verifiable Delay
+Functions"](https://eprint.iacr.org/2018/712) (IACR ePrint 2018/712). Puts
+Wesolowski's and Pietrzak's schemes side by side with a unified security
+analysis — the clearest single source for *why* someone would pick one over
+the other.
+
+### A production deployment
+
+[Chia Network — Proof of Time (VDFs)](https://docs.chia.net/proof-of-time/).
+Chia's own documentation for the class-group-based VDF at the center of its
+consensus protocol — see [Applications](/applications) for how this site
+summarizes it.
+
+---
+
+Also see [History](/history) for the earlier time-lock-puzzle work this
+research builds on, and [Glossary](/glossary) for short definitions of the
+recurring terms.

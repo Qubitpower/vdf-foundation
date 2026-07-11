@@ -1,0 +1,335 @@
+---
+layout: ../layouts/Layout.astro
+title: Code
+description: Eval, the Wesolowski proof, and verification — implemented in Python, JavaScript, and Rust, with line comments. Every sample here has actually been run.
+---
+
+# Code
+
+The same construction from [how it works](/how-it-works) — Eval, the
+Wesolowski proof, and verification — implemented in Python, JavaScript, and
+Rust. Every sample on this page has actually been run and checked for a
+correct roundtrip *and* a correctly-rejected tampered result across multiple
+values of `T`; none of this is pseudocode.
+
+## Python
+
+No third-party dependencies — just `hashlib` and `secrets` from the standard
+library.
+
+```python
+import hashlib
+import secrets
+
+def is_probable_prime(n: int, rounds: int = 20) -> bool:
+    """Miller–Rabin primality test."""
+    if n < 2:
+        return False
+    for p in (2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47):
+        if n == p:
+            return True
+        if n % p == 0:
+            return False
+    d, r = n - 1, 0
+    while d % 2 == 0:
+        d //= 2
+        r += 1
+    for _ in range(rounds):
+        a = secrets.randbelow(n - 3) + 2
+        x = pow(a, d, n)
+        if x == 1 or x == n - 1:
+            continue
+        for _ in range(r - 1):
+            x = (x * x) % n
+            if x == n - 1:
+                break
+        else:
+            return False
+    return True
+
+def generate_prime(bits: int) -> int:
+    while True:
+        n = secrets.randbits(bits)
+        n |= (1 << (bits - 1))  # exact bit length
+        n |= 1                   # odd
+        if is_probable_prime(n):
+            return n
+
+def generate_demo_modulus(total_bits: int = 512) -> int:
+    """NOT a trusted setup — see /how-it-works for why generating your own
+    p, q here defeats the purpose in a real deployment."""
+    half = total_bits // 2
+    return generate_prime(half) * generate_prime(half)
+
+def eval_vdf(x: int, T: int, N: int) -> int:
+    """y = x^(2^T) mod N via T sequential squarings."""
+    y = x
+    for _ in range(T):
+        y = (y * y) % N
+    return y
+
+def hash_to_prime(x: int, y: int, T: int, prime_bits: int = 128) -> int:
+    """Hash the statement, search upward for a prime."""
+    counter = 0
+    while True:
+        data = f"{x:x}|{y:x}|{T}|{counter}".encode()
+        h = int.from_bytes(hashlib.sha256(data).digest(), "big")
+        h %= 1 << prime_bits
+        h |= 1 << (prime_bits - 1)
+        h |= 1
+        if is_probable_prime(h):
+            return h
+        counter += 1
+
+def prove(x: int, y: int, T: int, N: int):
+    """Wesolowski proof: pi = x^floor(2^T / ell) mod N."""
+    ell = hash_to_prime(x, y, T)
+    q, r = divmod(1 << T, ell)  # full integer division, NOT modular
+    pi = pow(x, q, N)           # fast modpow — but q has ~T bits
+    return pi, ell, r
+
+def verify(x: int, y: int, T: int, N: int, pi: int, ell: int) -> bool:
+    """No T-step loop anywhere — fast regardless of T."""
+    ell_check = hash_to_prime(x, y, T)
+    if ell_check != ell:
+        return False
+    r = pow(2, T, ell)  # fast — exponent is only T, not 2^T
+    return y % N == (pow(pi, ell, N) * pow(x, r, N)) % N
+
+# --- usage ---
+N = generate_demo_modulus(512)
+x, T = 7, 100_000
+y = eval_vdf(x, T, N)
+pi, ell, r = prove(x, y, T, N)
+assert verify(x, y, T, N, pi, ell)
+assert not verify(x, (y + 1) % N, T, N, pi, ell)  # tampered y is rejected
+```
+
+## JavaScript
+
+This is the same implementation running live in the demo on this site — see
+[`src/lib/vdf.js`](https://github.com/Qubitpower/vdf-foundation/blob/main/src/lib/vdf.js)
+in the site's own repository (the live version also yields to the browser's
+event loop periodically so a progress UI can repaint during long
+computations — omitted here for clarity). Uses only native `BigInt` and the
+Web Crypto API — no dependencies.
+
+```javascript
+// Modular exponentiation safe for huge exponents: bits are extracted once
+// via toString(2) rather than repeatedly right-shifting the exponent —
+// shifting a shrinking-but-still-huge BigInt in a loop is quadratic, not
+// linear, in the exponent's bit length, which matters once exponents reach
+// the millions of bits this VDF's proof generation produces.
+function modPow(base, exp, mod) {
+  base %= mod;
+  if (base < 0n) base += mod;
+  if (exp === 0n) return 1n % mod;
+  const bits = exp.toString(2);
+  let result = 1n;
+  for (let i = 0; i < bits.length; i++) {
+    result = (result * result) % mod;
+    if (bits[i] === '1') result = (result * base) % mod;
+  }
+  return result;
+}
+
+function isProbablePrime(n, rounds = 20) {
+  const smallPrimes = [2n, 3n, 5n, 7n, 11n, 13n, 17n, 19n, 23n, 29n, 31n, 37n, 41n, 43n, 47n];
+  if (n < 2n) return false;
+  for (const p of smallPrimes) {
+    if (n === p) return true;
+    if (n % p === 0n) return false;
+  }
+  let d = n - 1n, r = 0n;
+  while (d % 2n === 0n) { d /= 2n; r += 1n; }
+  witnessLoop: for (let i = 0; i < rounds; i++) {
+    const bytes = new Uint8Array(Math.ceil(n.toString(2).length / 8));
+    crypto.getRandomValues(bytes);
+    let a = 0n;
+    for (const b of bytes) a = (a << 8n) | BigInt(b);
+    a = (a % (n - 3n)) + 2n;
+    let x = modPow(a, d, n);
+    if (x === 1n || x === n - 1n) continue;
+    for (let j = 0n; j < r - 1n; j++) {
+      x = (x * x) % n;
+      if (x === n - 1n) continue witnessLoop;
+    }
+    return false;
+  }
+  return true;
+}
+
+// y = x^(2^T) mod N via T sequential squarings.
+function evalVDF(x, T, N) {
+  let y = x;
+  for (let i = 0n; i < T; i++) y = (y * y) % N;
+  return y;
+}
+
+async function sha256ToBigInt(bytes) {
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  let n = 0n;
+  for (const b of new Uint8Array(digest)) n = (n << 8n) | BigInt(b);
+  return n;
+}
+
+// Hash the statement, search upward for a prime.
+async function hashToPrime(x, y, T, primeBits = 128) {
+  const enc = new TextEncoder();
+  let counter = 0;
+  while (true) {
+    const input = enc.encode(`${x.toString(16)}|${y.toString(16)}|${T}|${counter}`);
+    let h = await sha256ToBigInt(input);
+    h %= 1n << BigInt(primeBits);
+    h |= 1n << BigInt(primeBits - 1);
+    h |= 1n;
+    if (isProbablePrime(h)) return h;
+    counter++;
+  }
+}
+
+// Wesolowski proof: pi = x^floor(2^T / ell) mod N.
+async function prove(x, y, T, N) {
+  const ell = await hashToPrime(x, y, T);
+  const twoT = 1n << T; // full integer, NOT modular
+  const q = twoT / ell;
+  const r = modPow(2n, T, ell); // fast — exponent is only T
+  const pi = modPow(x, q, N);   // fast modpow — but q has ~T bits
+  return { pi, ell, r };
+}
+
+// No T-step loop anywhere — fast regardless of T.
+async function verify(x, y, T, N, pi, ell) {
+  const ellCheck = await hashToPrime(x, y, T);
+  if (ellCheck !== ell) return false;
+  const r = modPow(2n, T, ell);
+  return ((y % N) + N) % N === (modPow(pi, ell, N) * modPow(x, r, N)) % N;
+}
+```
+
+## Rust
+
+Uses [`num-bigint`](https://docs.rs/num-bigint) (with its `rand` feature),
+[`num-integer`](https://docs.rs/num-integer), and
+[`sha2`](https://docs.rs/sha2).
+
+```rust
+use num_bigint::{BigUint, RandBigInt};
+use num_integer::Integer;
+use num_traits::{One, Zero};
+use sha2::{Digest, Sha256};
+
+fn is_probable_prime(n: &BigUint, rounds: u32) -> bool {
+    let small_primes: [u32; 15] = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47];
+    if n < &BigUint::from(2u32) {
+        return false;
+    }
+    for &p in &small_primes {
+        let p = BigUint::from(p);
+        if n == &p { return true; }
+        if (n % &p).is_zero() { return false; }
+    }
+    let (one, two) = (BigUint::one(), BigUint::from(2u32));
+    let n_minus_1 = n - &one;
+    let mut d = n_minus_1.clone();
+    let mut r = 0u32;
+    while (&d % &two).is_zero() {
+        d /= &two;
+        r += 1;
+    }
+
+    let mut rng = rand::thread_rng();
+    'witness: for _ in 0..rounds {
+        let a = rng.gen_biguint_range(&two, &(n - &two));
+        let mut x = a.modpow(&d, n);
+        if x == one || x == n_minus_1 { continue; }
+        for _ in 0..r - 1 {
+            x = (&x * &x) % n;
+            if x == n_minus_1 { continue 'witness; }
+        }
+        return false;
+    }
+    true
+}
+
+fn generate_prime(bits: u64) -> BigUint {
+    let mut rng = rand::thread_rng();
+    loop {
+        let mut candidate = rng.gen_biguint(bits);
+        candidate.set_bit(bits - 1, true); // exact bit length
+        candidate.set_bit(0, true);        // odd
+        if is_probable_prime(&candidate, 20) {
+            return candidate;
+        }
+    }
+}
+
+/// NOT a trusted setup — see /how-it-works for why generating your own
+/// p, q here defeats the purpose in a real deployment.
+fn generate_demo_modulus(total_bits: u64) -> BigUint {
+    let half = total_bits / 2;
+    generate_prime(half) * generate_prime(half)
+}
+
+/// y = x^(2^T) mod N via T sequential squarings.
+fn eval_vdf(x: &BigUint, t: u64, n: &BigUint) -> BigUint {
+    let mut y = x.clone();
+    for _ in 0..t {
+        y = (&y * &y) % n;
+    }
+    y
+}
+
+/// Hash the statement, search upward for a prime.
+fn hash_to_prime(x: &BigUint, y: &BigUint, t: u64, prime_bits: u32) -> BigUint {
+    let mut counter: u64 = 0;
+    loop {
+        let input = format!("{:x}|{:x}|{}|{}", x, y, t, counter);
+        let digest = Sha256::digest(input.as_bytes());
+        let mut h = BigUint::from_bytes_be(&digest) % (BigUint::one() << prime_bits);
+        h.set_bit((prime_bits - 1) as u64, true);
+        h.set_bit(0, true);
+        if is_probable_prime(&h, 20) {
+            return h;
+        }
+        counter += 1;
+    }
+}
+
+/// Wesolowski proof: pi = x^floor(2^T / ell) mod N.
+fn prove(x: &BigUint, y: &BigUint, t: u64, n: &BigUint) -> (BigUint, BigUint, BigUint) {
+    let ell = hash_to_prime(x, y, t, 128);
+    let two_t = BigUint::one() << t; // full integer, NOT modular
+    let (q, r) = two_t.div_mod_floor(&ell);
+    let pi = x.modpow(&q, n); // fast modpow — but q has ~t bits
+    (pi, ell, r)
+}
+
+/// No T-step loop anywhere — fast regardless of T.
+fn verify(x: &BigUint, y: &BigUint, t: u64, n: &BigUint, pi: &BigUint, ell: &BigUint) -> bool {
+    if hash_to_prime(x, y, t, 128) != *ell {
+        return false;
+    }
+    let r = BigUint::from(2u32).modpow(&BigUint::from(t), ell); // fast — exponent is only t
+    (y % n) == (pi.modpow(ell, n) * x.modpow(&r, n)) % n
+}
+
+fn main() {
+    let n = generate_demo_modulus(512);
+    let (x, t) = (BigUint::from(7u32), 100_000u64);
+    let y = eval_vdf(&x, t, &n);
+    let (pi, ell, _r) = prove(&x, &y, t, &n);
+
+    assert!(verify(&x, &y, t, &n, &pi, &ell));
+    let tampered_y = (&y + BigUint::one()) % &n;
+    assert!(!verify(&x, &tampered_y, t, &n, &pi, &ell));
+}
+```
+
+---
+
+**Sources:** implements the construction derived on [how it
+works](/how-it-works). The Rust sample uses
+[`num-bigint`](https://docs.rs/num-bigint),
+[`num-integer`](https://docs.rs/num-integer), and
+[`sha2`](https://docs.rs/sha2).

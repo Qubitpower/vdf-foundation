@@ -1,0 +1,79 @@
+---
+layout: ../layouts/Layout.astro
+title: Applications
+description: Chia Network's production use of VDFs, randomness beacons, leader election — and an explicit, unavoidable caveat about quantum computers.
+---
+
+# Applications
+
+VDFs have one production deployment at real scale, and a cluster of related
+research applications that all lean on the same property: something that
+took real, unfakeable time to compute, and is cheap to check.
+
+## Chia Network: "Proof of Time"
+
+Chia Network's consensus protocol uses a VDF — which Chia calls **"Proof of
+Time"** — as a core building block, and is widely cited as the first major
+production system to actually deploy a VDF at scale rather than just
+research one. Chia deliberately chose **class groups** over RSA moduli
+specifically to avoid a trusted setup: with a class group, there's no $p$
+and $q$ for anyone to have generated and needed to forget. Chia's class
+group uses a **1024-bit discriminant**.
+
+Because generating a Wesolowski proof directly (the way [this site's
+demo](/interactive) does, for clarity) costs about as much sequential work
+as the delay itself, Chia splits the proof into up to **64 phases
+computed in parallel — "$n$-Wesolowski"** — trading some proof size and
+verification time for meaningfully faster proof generation. As proofs
+finish, Chia replaces larger $n$-Wesolowski proofs with smaller 1-Wesolowski
+proofs when there's time to compute them, since a smaller proof is cheaper
+for the rest of the network to store and verify.
+
+## Randomness beacons and leader election
+
+A VDF applied to a source of randomness makes that randomness harder to
+manipulate: even if you could bias the *input* to a VDF, you can't finish
+computing the *output* fast enough to try many inputs and pick a favorable
+one — the sequentiality itself defeats that kind of grinding attack.
+
+In February 2019, the Ethereum Foundation and several other organizations
+(including Protocol Labs) proposed funding of up to $15 million for a **VDF
+Alliance** to research and build production-grade VDF implementations —
+including dedicated hardware — for exactly this purpose: **randomness
+beacons** and **leader election** in proof-of-stake consensus, where a
+validator shouldn't be able to predict or influence when they'll next be
+selected to propose a block. This was a research and hardware-development
+effort rather than an immediately deployed production system in the way
+Chia's Proof of Time is — the honest state of VDF-based randomness beacons
+and leader election, at the time of writing, is "extensively researched and
+partially deployed," not "as ubiquitous as Chia's use in its own consensus."
+
+Boneh, Bonneau, Bünz, and Fisch's original paper also lists **proofs of
+replication** — proving that a storage provider is genuinely holding a
+distinct physical copy of data, not just claiming to — as a candidate VDF
+application.
+
+## The honest caveat: VDFs are not post-quantum
+
+Both the Wesolowski and Pietrzak proof systems — and the group-of-unknown-order
+construction itself — rely on the **hardness of computing a group's
+order**. Shor's algorithm solves exactly that problem efficiently on a
+sufficiently large quantum computer, for both RSA-modulus groups (via
+integer factorization) and class groups. **Every VDF construction on this
+site breaks under Shor's algorithm.** This isn't a corner case or a future
+concern to footnote — it's a direct consequence of the same
+number-theoretic hardness assumption these VDFs are built on, [the same
+family of assumption Pedersen commitments' binding property relies
+on](https://pedersen.foundation/pedersen-commitments#why-binding-is-only-computational).
+Post-quantum-secure delay functions are an active area of research, but
+none of the constructions covered on this site are one.
+
+---
+
+**Sources:** [Chia Documentation — Proof of Time
+(VDFs)](https://docs.chia.net/proof-of-time/); Boneh, Bonneau, Bünz, Fisch,
+["Verifiable Delay Functions,"](https://eprint.iacr.org/2018/601) CRYPTO
+2018, pp. 757–788 (applications section); ["Ethereum Foundation and Others
+Weigh $15 Million Bid to Build 'Randomness'
+Tech,"](https://www.coindesk.com/markets/2019/02/07/ethereum-foundation-and-others-weigh-15-million-bid-to-build-randomness-tech)
+CoinDesk, February 2019.

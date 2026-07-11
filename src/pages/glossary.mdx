@@ -1,0 +1,77 @@
+---
+layout: ../layouts/Layout.astro
+title: Glossary
+description: Plain-language definitions for the terms used across this site — group of unknown order, sequentiality, trusted setup, class group, discriminant, hash-to-prime, time-lock puzzle.
+---
+
+# Glossary
+
+Short, plain-language definitions for terms used elsewhere on this site. Each
+links back to the page where it's explained in more depth.
+
+### Class group
+
+A group derived from an imaginary quadratic field, used as an alternative to
+an RSA modulus for building a [group of unknown order](#group-of-unknown-order).
+Its main advantage: the group's order is genuinely unknown to everyone by
+construction, from public parameters alone — no [trusted
+setup](#trusted-setup) required. Chia Network uses class groups in
+production; see [Applications](/applications).
+
+### Discriminant
+
+The parameter that defines a specific [class group](#class-group) — roughly
+analogous to the modulus $N$ in the RSA construction. Chia Network uses a
+1024-bit discriminant; see [Applications](/applications).
+
+### Group of unknown order
+
+A mathematical group where nobody involved knows the group's order (its
+total number of elements). This property is what makes repeated squaring
+genuinely sequential — see [how it works](/how-it-works#repeated-squaring-in-a-group-of-unknown-order)
+for why knowing the order would let you skip straight to the answer. Built
+either from an RSA modulus (needs a [trusted setup](#trusted-setup)) or a
+[class group](#class-group) (doesn't).
+
+### Hash-to-prime
+
+A way to deterministically derive a prime number from arbitrary input by
+hashing the input and searching upward (checking primality at each
+candidate) until landing on a prime. Used to generate the Wesolowski proof's
+$\ell$ from the statement $(x, y, T)$ — see [how it
+works](/how-it-works#the-wesolowski-proof).
+
+### Sequentiality
+
+The property that a computation cannot be meaningfully sped up by throwing
+more parallel hardware at it — the *Delay* property from [what is a
+VDF](/what-is-a-vdf). Repeated squaring in a group of unknown order is
+believed to have this property; there's no known way to compute
+$x^{2^T} \bmod N$ in fewer than roughly $T$ sequential steps without knowing
+the group's order.
+
+### Time-lock puzzle
+
+An earlier, related primitive (Rivest, Shamir, Wagner, 1996) that also uses
+sequential squaring to force a minimum computation time, but requires a
+fresh [trusted setup](#trusted-setup) for every individual puzzle and has no
+general mechanism for a third party to publicly verify a solution without
+redoing the work — the two things a VDF's proof system solves. See
+[History](/history) for the citation and how it relates to VDFs.
+
+### Trusted setup
+
+A step in a protocol that requires someone to be trusted to have generated
+some value honestly and then destroyed the sensitive part of it. For an
+RSA-modulus-based VDF, this means trusting that whoever generated
+$N = p \cdot q$ actually forgot $p$ and $q$ — knowing the factorization
+means knowing the group's order, which breaks sequentiality entirely. See
+[how it works](/how-it-works#repeated-squaring-in-a-group-of-unknown-order)
+for why this site's own demo is explicit that it does **not** have a real
+trusted setup.
+
+---
+
+**Sources:** these are standard definitions used consistently across the
+VDF literature; see [History](/history) for citations to the original
+papers that introduced several of these concepts.
