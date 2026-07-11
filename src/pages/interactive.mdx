@@ -1,0 +1,30 @@
+---
+layout: ../layouts/Layout.astro
+title: Interactive demo
+description: Generate a demo RSA modulus, run Eval with a live timer, generate a Wesolowski proof, and verify almost instantly — all computed live in your browser.
+---
+
+import VdfDemo from '../components/VdfDemo.astro';
+
+# Interactive: run a VDF, live
+
+This runs the exact construction from [how it works](/how-it-works) — real
+BigInt squaring, a real Wesolowski proof, and real verification, computed
+live in your browser. Nothing here is precomputed or mocked.
+
+1. A demo-sized (512-bit) RSA modulus is generated the moment this page
+   loads — see the honest note about why that's not a trusted setup.
+2. Pick an input `x` and a delay `T` with the slider, then **Eval** — watch
+   the live counter and timer while `T` sequential squarings run.
+3. **Generate the proof** — at demo scale this costs about as much sequential
+   work as Eval did; [how it works](/how-it-works) explains why production
+   systems avoid that.
+4. **Verify** — takes milliseconds, regardless of how large `T` was. Try
+   verifying a tampered `y` too, to see it get rejected.
+
+<VdfDemo />
+
+---
+
+**Sources:** implements the construction derived on [how it
+works](/how-it-works).

@@ -98,12 +98,12 @@ sequential as the guarantee that nobody knows $N$'s factorization. Generating
 $p$ and $q$ yourself and using them in your own computation is **not** a
 trusted setup in any meaningful sense — it's the opposite: you'd know the
 group's order and could skip straight to the answer, defeating the entire
-purpose. This site's interactive demo, coming in the next phase, will
-generate its own RSA modulus client-side purely for demonstration purposes,
-and will say so plainly rather than imply that's how a real deployment
-works. A real deployment needs either an actual multi-party trusted-setup
-ceremony on a cryptographically-sized modulus, or a class group, which needs
-no trusted setup at all — Chia Network does the latter, covered on a future
+purpose. This site's [interactive demo](/interactive) generates its own RSA
+modulus client-side purely for demonstration purposes, and says so plainly
+rather than imply that's how a real deployment works. A real deployment
+needs either an actual multi-party trusted-setup ceremony on a
+cryptographically-sized modulus, or a class group, which needs no trusted
+setup at all — Chia Network does the latter, covered on a future
 Applications page.
 
 **Proof generation is simplified here, honestly stated.** Computing $\pi =
@@ -113,10 +113,10 @@ almost as large as $2^T$. Production systems use smarter techniques —
 caching intermediate powers computed along the way during Eval, and splitting
 Wesolowski's proof into many phases computed in parallel ("$n$-Wesolowski",
 used by Chia) — to make proof generation meaningfully faster than
-recomputing the delay from scratch. The code and interactive demo on this
-site (coming in later phases) use the direct, un-optimized computation of
-$\pi$: correct, and fast enough at demo-sized $T$, but not a demonstration
-of those production speedups.
+recomputing the delay from scratch. The [interactive demo](/interactive) on
+this site (and a future Code page) use the direct, un-optimized computation
+of $\pi$: correct, and fast enough at demo-sized $T$, but not a
+demonstration of those production speedups.
 
 ---
 

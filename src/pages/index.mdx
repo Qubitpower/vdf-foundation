@@ -4,6 +4,8 @@ title: VDFs, explained
 description: A plain-spoken, working explanation of Verifiable Delay Functions (Boneh, Bonneau, Bünz, Fisch, CRYPTO 2018) — computation that provably takes real time to run, and almost no time to check.
 ---
 
+import VdfDemo from '../components/VdfDemo.astro';
+
 # A computation that provably takes real time — and takes almost no time to check
 
 A **Verifiable Delay Function (VDF)** is a function that's deliberately slow to
@@ -21,6 +23,9 @@ this precise, or go straight to [the construction](/how-it-works): the
 squaring chain, the group of unknown order, and the Wesolowski proof that
 makes verification fast regardless of how long the computation ran.
 
-An interactive demo — running the delay live in your browser, T controlled by
-a slider, with a real proof and an almost-instant verification next to it —
-is coming in the next phase of this site.
+Try it right here — pick a delay and watch it run, live:
+
+<VdfDemo />
+
+More on [Interactive](/interactive), including verifying a tampered result
+to see it get rejected.

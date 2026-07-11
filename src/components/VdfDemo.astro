@@ -1,0 +1,192 @@
+<div class="demo-panel" id="vdf-demo">
+  <p class="demo-status" id="vdf-status">Generating a demo-sized RSA modulus…</p>
+
+  <div class="demo-divider" id="vdf-modulus-info" hidden>
+    <p class="demo-hint">
+      <code>N</code> = <code id="vdf-n-hex"></code> (512-bit, generated right here in your browser). <strong>This is not a trusted setup</strong> — this page generated its own <code>p</code> and <code>q</code>, so it knows the group's order and could cheat if it wanted to. A real deployment needs either an honest multi-party trusted-setup ceremony on a much larger modulus, or a class group (no trusted setup needed at all) — see <a href="/how-it-works#repeated-squaring-in-a-group-of-unknown-order">how it works</a>.
+    </p>
+  </div>
+
+  <div class="demo-row" id="vdf-controls" hidden>
+    <label for="vdf-x">Input x</label>
+    <div class="demo-input-row">
+      <input id="vdf-x" type="number" value="7" min="2" step="1" />
+    </div>
+  </div>
+
+  <div class="demo-row" id="vdf-t-row" hidden>
+    <label for="vdf-t-slider">Delay T = <span id="vdf-t-value">1,000,000</span> squarings (<span id="vdf-t-estimate"></span>)</label>
+    <input id="vdf-t-slider" type="range" min="0" max="1000" value="800" style="width: 100%;" />
+  </div>
+
+  <div class="demo-row" id="vdf-eval-row" hidden>
+    <button id="vdf-eval-btn" type="button">1. Eval — compute y = x^(2^T) mod N</button>
+    <p class="demo-hint" id="vdf-eval-progress"></p>
+  </div>
+
+  <div class="demo-divider" id="vdf-eval-result" hidden>
+    <p class="demo-label">y</p>
+    <code class="demo-commitment" id="vdf-y-hex"></code>
+    <p class="demo-hint" id="vdf-eval-time"></p>
+    <button id="vdf-proof-btn" type="button">2. Generate proof (Wesolowski)</button>
+    <p class="demo-hint" id="vdf-proof-progress"></p>
+  </div>
+
+  <div class="demo-divider" id="vdf-proof-result" hidden>
+    <p class="demo-label">π (proof)</p>
+    <code class="demo-commitment" id="vdf-pi-hex"></code>
+    <p class="demo-hint" id="vdf-proof-time"></p>
+    <div class="demo-input-row">
+      <button id="vdf-verify-btn" type="button">3. Verify</button>
+      <button id="vdf-verify-tampered-btn" type="button" class="secondary">Verify a tampered y instead</button>
+    </div>
+  </div>
+
+  <div class="demo-divider" id="vdf-verify-result" hidden>
+    <p class="demo-check" id="vdf-verify-check"></p>
+    <p class="demo-hint" id="vdf-verify-comparison"></p>
+  </div>
+</div>
+
+<script>
+  import { generateDemoModulus, evalVDF, proveVDF, verifyVDF } from '../lib/vdf.js';
+
+  const statusEl = document.getElementById('vdf-status')!;
+  const modulusInfoEl = document.getElementById('vdf-modulus-info')!;
+  const nHexEl = document.getElementById('vdf-n-hex')!;
+  const controlsEl = document.getElementById('vdf-controls')!;
+  const xInput = document.getElementById('vdf-x') as HTMLInputElement;
+  const tRowEl = document.getElementById('vdf-t-row')!;
+  const tSlider = document.getElementById('vdf-t-slider') as HTMLInputElement;
+  const tValueEl = document.getElementById('vdf-t-value')!;
+  const tEstimateEl = document.getElementById('vdf-t-estimate')!;
+  const evalRowEl = document.getElementById('vdf-eval-row')!;
+  const evalBtn = document.getElementById('vdf-eval-btn') as HTMLButtonElement;
+  const evalProgressEl = document.getElementById('vdf-eval-progress')!;
+  const evalResultEl = document.getElementById('vdf-eval-result')!;
+  const yHexEl = document.getElementById('vdf-y-hex')!;
+  const evalTimeEl = document.getElementById('vdf-eval-time')!;
+  const proofBtn = document.getElementById('vdf-proof-btn') as HTMLButtonElement;
+  const proofProgressEl = document.getElementById('vdf-proof-progress')!;
+  const proofResultEl = document.getElementById('vdf-proof-result')!;
+  const piHexEl = document.getElementById('vdf-pi-hex')!;
+  const proofTimeEl = document.getElementById('vdf-proof-time')!;
+  const verifyBtn = document.getElementById('vdf-verify-btn') as HTMLButtonElement;
+  const verifyTamperedBtn = document.getElementById('vdf-verify-tampered-btn') as HTMLButtonElement;
+  const verifyResultEl = document.getElementById('vdf-verify-result')!;
+  const verifyCheckEl = document.getElementById('vdf-verify-check')!;
+  const verifyComparisonEl = document.getElementById('vdf-verify-comparison')!;
+
+  function shortHex(n: bigint, chars = 48) {
+    const hex = n.toString(16);
+    return hex.length > chars ? `0x${hex.slice(0, chars)}…` : `0x${hex}`;
+  }
+
+  function sliderToT(pos: number): bigint {
+    const exponent = 2 + (5 * pos) / 1000;
+    return BigInt(Math.round(10 ** exponent));
+  }
+
+  function estimateLabel(T: bigint): string {
+    // Rough guide based on measured timing at a 512-bit modulus — see
+    // this site's project notes for the benchmarks behind these numbers.
+    if (T < 10000n) return 'near instant';
+    if (T < 200000n) return 'well under a second';
+    if (T < 2000000n) return '~1 second';
+    if (T < 6000000n) return 'a few seconds';
+    return 'several seconds';
+  }
+
+  let N = 0n;
+  let T = sliderToT(Number(tSlider.value));
+  let state: { x: bigint; y?: bigint; pi?: bigint; ell?: bigint } = { x: 7n };
+
+  function updateTLabel() {
+    T = sliderToT(Number(tSlider.value));
+    tValueEl.textContent = T.toLocaleString('en-US');
+    tEstimateEl.textContent = estimateLabel(T);
+  }
+  tSlider.addEventListener('input', updateTLabel);
+  updateTLabel();
+
+  (async () => {
+    N = generateDemoModulus(512).N;
+    nHexEl.textContent = shortHex(N, 40);
+    statusEl.textContent = 'Ready.';
+    modulusInfoEl.hidden = false;
+    controlsEl.hidden = false;
+    tRowEl.hidden = false;
+    evalRowEl.hidden = false;
+  })();
+
+  evalBtn.addEventListener('click', async () => {
+    evalBtn.disabled = true;
+    evalResultEl.hidden = true;
+    proofResultEl.hidden = true;
+    verifyResultEl.hidden = true;
+
+    const x = BigInt(Math.max(2, Math.trunc(Number(xInput.value) || 7)));
+    state = { x };
+
+    const t0 = performance.now();
+    const y = await evalVDF(x, T, N, (p) => {
+      const pct = ((Number(p.done) / Number(p.total)) * 100).toFixed(0);
+      evalProgressEl.textContent = `${pct}% (${p.done.toLocaleString('en-US')} / ${p.total.toLocaleString('en-US')} squarings) — ${(p.elapsedMs / 1000).toFixed(1)}s elapsed`;
+    });
+    const evalMs = performance.now() - t0;
+
+    state.y = y;
+    yHexEl.textContent = shortHex(y);
+    evalProgressEl.textContent = '';
+    evalTimeEl.textContent = `Eval finished in ${(evalMs / 1000).toFixed(2)}s (T = ${T.toLocaleString('en-US')} squarings).`;
+    evalResultEl.hidden = false;
+    evalBtn.disabled = false;
+  });
+
+  proofBtn.addEventListener('click', async () => {
+    if (state.y === undefined) return;
+    proofBtn.disabled = true;
+    proofResultEl.hidden = true;
+    verifyResultEl.hidden = true;
+
+    const t0 = performance.now();
+    const { pi, ell } = await proveVDF(state.x, state.y, T, N, (p) => {
+      const pct = ((Number(p.done) / Number(p.total)) * 100).toFixed(0);
+      proofProgressEl.textContent = `${pct}% — ${(p.elapsedMs / 1000).toFixed(1)}s elapsed (this is the "simplified proof generation" from how it works — it costs about as much as Eval did, at demo scale)`;
+    });
+    const proofMs = performance.now() - t0;
+
+    state.pi = pi;
+    state.ell = ell;
+    piHexEl.textContent = shortHex(pi);
+    proofProgressEl.textContent = '';
+    proofTimeEl.textContent = `Proof generated in ${(proofMs / 1000).toFixed(2)}s.`;
+    proofResultEl.hidden = false;
+    proofBtn.disabled = false;
+  });
+
+  async function runVerify(useTamperedY: boolean) {
+    if (state.pi === undefined || state.ell === undefined || state.y === undefined) return;
+    const t0 = performance.now();
+    const yToCheck = useTamperedY ? (state.y + 1n) % N : state.y;
+    const ok = await verifyVDF(state.x, yToCheck, T, N, state.pi, state.ell);
+    const verifyMs = performance.now() - t0;
+
+    if (useTamperedY) {
+      verifyCheckEl.textContent = ok
+        ? '✗ tampered y incorrectly verified (should never happen)'
+        : '✓ tampered y correctly rejected — the proof only matches the real y';
+      verifyCheckEl.className = `demo-check ${ok ? 'bad' : 'ok'}`;
+    } else {
+      verifyCheckEl.textContent = ok
+        ? '✓ verified — y really is x^(2^T) mod N'
+        : '✗ verification failed (should never happen)';
+      verifyCheckEl.className = `demo-check ${ok ? 'ok' : 'bad'}`;
+    }
+    verifyComparisonEl.textContent = `Verify took ${verifyMs.toFixed(1)}ms — regardless of how long Eval and the proof took for T = ${T.toLocaleString('en-US')}.`;
+    verifyResultEl.hidden = false;
+  }
+
+  verifyBtn.addEventListener('click', () => runVerify(false));
+  verifyTamperedBtn.addEventListener('click', () => runVerify(true));
+</script>
